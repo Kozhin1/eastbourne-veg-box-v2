@@ -1,3 +1,7 @@
+import emailjs from 'emailjs-com';
+
+emailjs.init('Wny9CYSXQaMzs_cAd'); // Your EmailJS User ID
+
 // Product data
 const products = [
   {
@@ -118,6 +122,16 @@ function initApp() {
         </div>
       </section>
 
+      <section id="filter" class="filter-section" aria-label="Filter options">
+        <h2>Filter Boxes</h2>
+        <select id="box-filter" onchange="filterProducts()">
+          <option value="all">All</option>
+          <option value="veg">Veg Boxes</option>
+          <option value="fruit">Fruit Boxes</option>
+          <option value="mixed">Mixed Boxes</option>
+        </select>
+      </section>
+
       <section id="products" class="products" aria-label="Product listings">
         <h2>Our Fresh Produce Boxes</h2>
         <div class="product-grid" role="list">
@@ -218,8 +232,8 @@ function initApp() {
 }
 
 // Render products with improved accessibility
-function renderProducts() {
-  return products.map(product => `
+function renderProducts(filteredProducts = products) {
+  return filteredProducts.map(product => `
     <div class="product-card" role="listitem">
       <img src="${product.image}" alt="${product.name}" class="product-image">
       <div class="product-info">
@@ -237,6 +251,21 @@ function renderProducts() {
       </div>
     </div>
   `).join('');
+}
+
+function filterProducts() {
+  const filterValue = document.getElementById('box-filter').value;
+  let filteredProducts = products;
+
+  if (filterValue === 'veg') {
+    filteredProducts = products.filter(product => product.name.toLowerCase().includes('veg'));
+  } else if (filterValue === 'fruit') {
+    filteredProducts = products.filter(product => product.name.toLowerCase().includes('fruit'));
+  } else if (filterValue === 'mixed') {
+    filteredProducts = products.filter(product => product.name.toLowerCase().includes('mixed'));
+  }
+
+  document.querySelector('.product-grid').innerHTML = renderProducts(filteredProducts);
 }
 
 function addToCart(productId) {
@@ -321,27 +350,20 @@ function handleCheckout(event) {
     total: cart.reduce((sum, item) => sum + item.price, 0)
   };
 
-  // Send order email using formsubmit.co
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = 'https://formsubmit.co/your-email@example.com'; // Replace with your email
-
-  // Add order details to form
-  const orderDetails = document.createElement('input');
-  orderDetails.type = 'hidden';
-  orderDetails.name = 'order';
-  orderDetails.value = JSON.stringify(orderData, null, 2);
-  form.appendChild(orderDetails);
-
-  document.body.appendChild(form);
-  form.submit();
-
-  // Clear cart and close modal
-  cart = [];
-  updateCart();
-  updateCartCount();
-  document.getElementById('checkout-modal').classList.remove('active');
-  showNotification('Order placed successfully! We will contact you shortly.');
+  // Send order email using EmailJS
+  emailjs.send('EastbourneVegBox', 'template_mlcjwfm', orderData)
+    .then(() => {
+      // Clear cart and close modal
+      cart = [];
+      updateCart();
+      updateCartCount();
+      document.getElementById('checkout-modal').classList.remove('active');
+      showNotification('Order placed successfully! We will contact you shortly.');
+    })
+    .catch(error => {
+      console.error('EmailJS Error:', error);
+      showNotification('Failed to place order. Please try again.');
+    });
 }
 
 function showNotification(message) {
@@ -383,6 +405,7 @@ function initEventListeners() {
   window.toggleCart = toggleCart;
   window.showCheckout = showCheckout;
   window.handleCheckout = handleCheckout;
+  window.filterProducts = filterProducts;
 }
 
 // Initialize the app
